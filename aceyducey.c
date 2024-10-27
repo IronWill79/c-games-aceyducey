@@ -1,166 +1,176 @@
+#include <ctype.h>
 #include <errno.h>
 #include <time.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+void runGame();
+int pickCard();
+void getCardName(int card, char cardName[]);
+void strToLowerCase(char string[]);
 
 int main(int argc, char *argv[])
 {
+    // Print instructions
+    printf("Acey Ducey Card Game\nOriginally by Creative Computing - Morristown, New Jersey\n\nAcey Ducey is played in the following manner.\nThe dealer (computer) deals two cards face up. You have an option to bet or not bet depending on whether or not you feel the card will have a value between the first two.\nIf you do not want to bet, input a 0\n\n");
+
+    char rawInput[80];    // This will hold the raw input entered by the user
+    char inputString[80]; // This will hold the processed input string
+
+    // Seed the random number generator
     srand((unsigned int)time(NULL));
-
-    printf("Acey Ducey Card Game\nOriginally by Creative Computing - Morristown, New Jersey\n\nAcey Ducey is played in the following manner.\nThe dealer (computer) deals two cards face up. You have an option to bet or not bet depending on whether or not you feel the card will have a value between the first two.\nIf you do not want to bet, input a '0'\n\n");
-
-    int money = 100;
-    int card1 = 0;
-    int card2 = 0;
-    int dealerCard = 0;
-
-    printf("You now have %i dollars\n\n", money);
-
-    bool shouldQuit = false;
 
     do
     {
-        printf("Here are your next two cards\n");
+        // Play a game
+        runGame();
 
-        do
-        {
-            do
-            {
-                card1 = (rand() % 14) + 2;
-            } while (card1 < 2 || card1 > 14);
+        // Ask the player if they want to play again
+        printf("\nTry again (yes or no)? ");
+        fgets(rawInput, sizeof(rawInput), stdin);
+        sscanf(rawInput, " %s", inputString);
+        strToLowerCase(inputString);
+    } while (!strncmp(inputString, "yes", 3));
 
-            do
-            {
-                card2 = (rand() % 14) + 2;
-            } while (card2 < 2 || card2 > 14);
-        } while (card1 >= card2);
+    printf("\nOk. Hope you had fun!\n\n");
 
-        if (card1 < 11)
+    return EXIT_SUCCESS;
+}
+
+void runGame()
+{
+    char rawInput[80];
+    int bet = 0;
+    int money = 100;
+
+    while (money > 0)
+    {
+        printf("\n\nYou now have %i dollars\n\n", money);
+
+        // Pick first card
+        int cardA = pickCard();
+        int cardB = cardA;
+
+        while (cardB == cardA)
         {
-            printf("%i\n", card1);
-        }
-        else if (card1 == 11)
-        {
-            printf("JACK\n");
-        }
-        else if (card1 == 12)
-        {
-            printf("QUEEN\n");
-        }
-        else if (card1 == 13)
-        {
-            printf("KING\n");
-        }
-        else if (card1 == 14)
-        {
-            printf("ACE\n");
+            cardB = pickCard();
         }
 
-        if (card2 < 11)
+        if (cardB < cardA)
         {
-            printf("%i\n", card2);
-        }
-        else if (card2 == 11)
-        {
-            printf("JACK\n");
-        }
-        else if (card2 == 12)
-        {
-            printf("QUEEN\n");
-        }
-        else if (card2 == 13)
-        {
-            printf("KING\n");
-        }
-        else if (card2 == 14)
-        {
-            printf("ACE\n");
+            int tmp = cardA;
+            cardA = cardB;
+            cardB = tmp;
         }
 
+        // Get the card names
+        char cardAName[6];
+        char cardBName[6];
+        getCardName(cardA, cardAName);
+        getCardName(cardB, cardBName);
+
+        // Show the cards to the player
+        printf("Here are your next two cards:\n%s\n%s\n\n", cardAName, cardBName);
+
+        // Get the player's bet
         bool validBet = false;
-        int bet = 0;
 
-        do
+        // Continue to ask for the player's bet until player enters a valid amount
+        while (!validBet)
         {
-            printf("What is your bet?\n");
-            char rawInput[80];
-            char *inputStr;
-
-            errno = 0;
+            printf("What is your bet? ");
             fgets(rawInput, sizeof(rawInput) / sizeof(rawInput[0]), stdin);
-            bet = (int)strtol(rawInput, &inputStr, 10);
 
-            if (errno == ERANGE || *inputStr != '\0')
+            // Attempt to convert to a number
+            int varsFilled = sscanf(rawInput, " %i", &bet);
+
+            // Only validate bet if it's a positive number equal to or less than player's money, otherwise display an error message
+            if (varsFilled != 1 || bet < 0)
             {
-                // Invalid bet entered
-                printf("Invalid amount bet. Try again.\n\n");
-            }
-            else if (bet == 0)
-            {
-                printf("Chicken!!\n\n");
-                validBet = true;
+                printf("\nPlease enter 0 for no bet or a whole number greater than zero to bet that amount.\n\n");
             }
             else if (bet > money)
             {
-                printf("Sorry, my friend, but you bet too much. You only have %i dollars to bet.", money);
-            }
-        } while (!validBet);
-
-        do
-        {
-            dealerCard = (rand() % 14) + 2;
-        } while (dealerCard < 2 || dealerCard > 14);
-
-        if (dealerCard < 11)
-        {
-            printf("%i\n", dealerCard);
-        }
-        else if (dealerCard == 11)
-        {
-            printf("JACK\n");
-        }
-        else if (dealerCard == 12)
-        {
-            printf("QUEEN\n");
-        }
-        else if (dealerCard == 13)
-        {
-            printf("KING\n");
-        }
-        else if (dealerCard == 14)
-        {
-            printf("ACE\n");
-        }
-
-        if (dealerCard <= card1 && dealerCard < card2)
-        {
-            printf("You win!!!\n");
-            money += bet;
-        }
-        else
-        {
-            printf("Sorry, you lose\n");
-            if (bet < money)
-            {
-                money -= bet;
+                printf("Sorry my friend but you bet too much.\nYou only have %i dollars to bet.\n\n", money);
             }
             else
             {
-                printf("Sorry, friend, but you blew your wad.\nTry again (Yes or No)\n");
-
-                char rawInput[80];
-                char *input;
-                fgets(rawInput, sizeof(rawInput) / sizeof(rawInput[0]), stdin);
-                sscanf(rawInput, " %s", &input);
-                if (input != "Yes")
-                {
-                    printf("Ok hope you had fun!");
-                    shouldQuit = true;
-                }
+                validBet = true;
             }
         }
-    } while (!shouldQuit);
 
-    return EXIT_SUCCESS;
+        // Only pick third card if player has chosen to bet
+        if (bet == 0)
+        {
+            printf("\nChicken!\n");
+        }
+        else
+        {
+            // Pick third card
+            int cardC = pickCard();
+
+            // Get name of third card
+            char cardCName[6];
+            getCardName(cardC, cardCName);
+
+            // Display third card to player
+            printf("\n%s\n", cardCName);
+
+            // Check if player has won or lost
+            if (cardA < cardC && cardC < cardB)
+            {
+                printf("You win!!!\n");
+                money += bet;
+            }
+            else
+            {
+                printf("Sorry, you lose.\n");
+                money -= bet;
+            }
+        }
+    }
+
+    printf("\nSorry friend, but you blew your wad.\n");
+}
+
+// This function returns a card picked at random
+int pickCard()
+{
+    return rand() % 13 + 2;
+}
+
+// This function returns the correct card name for the card passed at the first argument,
+// the second argument is a character array where the card name will be stored (which must have space for at least six characters)
+void getCardName(int card, char cardName[])
+{
+    switch (card)
+    {
+    case 11:
+        strcpy(cardName, "Jack");
+        break;
+    case 12:
+        strcpy(cardName, "Queen");
+        break;
+    case 13:
+        strcpy(cardName, "King");
+        break;
+    case 14:
+        strcpy(cardName, "Ace");
+        break;
+    default:
+        sprintf(cardName, "%i", card);
+        break;
+    }
+}
+
+// This function converts the string to lower case letters
+void strToLowerCase(char string[])
+{
+    // The `string[i]` boolean here works because a string is terminated with a null, which is falsey
+    for (int i = 0; string[i]; i++)
+    {
+        string[i] = tolower(string[i]);
+    }
 }
